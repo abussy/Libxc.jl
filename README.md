@@ -56,6 +56,17 @@ using CUDA
 CUDA.set_runtime_version!(v"12.8")
 ```
 
+Alternatively, you can provide a local build of the GPU libxc library
+by setting the `libxc_gpu_path` preference:
+```julia
+using Libxc
+Libxc.set_gpu_libxc_path!("/path/to/your/local/libxc_gpu.so")
+```
+This writes the path to `LocalPreferences.toml` and takes precedence over
+the library shipped by `Libxc_GPU_jll`. To unset the preference and fall
+back to `Libxc_GPU_jll`, use `Libxc.set_gpu_libxc_path!(nothing)`.
+A Julia restart is required for the change to take effect.
+
 ## Status
 Full support for evaluating LDA, GGA and meta-GGA functionals
 on CPUs as shown above.

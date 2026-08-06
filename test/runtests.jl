@@ -8,5 +8,6 @@ using Libxc
     else
         include("properties.jl")
         include("cpu.jl")
+        include("preferences.jl")
     end
 end  # outer wrapper
