@@ -1,3 +1,4 @@
+using GPUArraysCore: AbstractGPUArray
 using Preferences: @load_preference, @set_preferences!, @delete_preferences!
 
 """
@@ -276,4 +277,41 @@ macro define_gpu_methods(lib, array_t, ptr_t, null_t)
             deallocate_gpufunctional(pointer)
         end
     end)
+end
+
+
+# Fallback implementation for GPU arrays when no GPU libxc library is available:
+# copy data to the CPU, run the CPU evaluate!, and copy outputs back.
+cpuify(::Nothing) = nothing
+cpuify(x::AbstractGPUArray) = Array(x)
+cpuify(x) = x
+
+const EVALUATE_INPUT_KWARGS = (:sigma, :tau, :lapl)
+
+function _fallback_to_cpu!(func::Functional, family, rho::AbstractGPUArray{Float64}; kwargs...)
+    cpu_rho    = Array(rho)
+    cpu_kwargs = NamedTuple(key => cpuify(val) for (key, val) in pairs(kwargs))
+    evaluate!(func, family, cpu_rho; cpu_kwargs...)
+
+    for (key, val) in pairs(cpu_kwargs)
+        if !(key in EVALUATE_INPUT_KWARGS) && kwargs[key] isa AbstractGPUArray
+            copyto!(kwargs[key], val)
+        end
+    end
+    nothing
+end
+
+function evaluate!(func::Functional, family::Union{Val{:lda},Val{:hyb_lda}},
+                   rho::AbstractGPUArray{Float64}; kwargs...)
+    _fallback_to_cpu!(func, family, rho; kwargs...)
+end
+
+function evaluate!(func::Functional, family::Union{Val{:gga},Val{:hyb_gga}},
+                   rho::AbstractGPUArray{Float64}; kwargs...)
+    _fallback_to_cpu!(func, family, rho; kwargs...)
+end
+
+function evaluate!(func::Functional, family::Union{Val{:mgga},Val{:hyb_mgga}},
+                   rho::AbstractGPUArray{Float64}; kwargs...)
+    _fallback_to_cpu!(func, family, rho; kwargs...)
 end
